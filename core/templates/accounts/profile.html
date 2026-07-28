@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block main %}
+<div class="h-full flex flex-col bg-white overflow-y-auto">
+  <div
+    class="absolute top-0 left-0 right-0 z-20 px-3 pt-3 pb-2 bg-white border-b border-neutral-100 flex items-center gap-3">
+    <a href="{% url 'home' %}" class="size-8 flex items-center justify-center rounded-full hover:bg-neutral-100">
+      <i class="fa-solid fa-chevron-left text-black"></i>
+    </a>
+    <h1 class="page-title">Profile</h1>
+  </div>
+
+  <main class="mt-[60px] px-3 pb-6">
+    <div class="flex flex-col items-center pt-3 pb-4">
+      <a href="{% url 'change-avatar' %}" class="relative">
+        <div class="w-16 h-16 rounded-full overflow-hidden bg-neutral-200 ring-2 ring-violet-500 ring-offset-2">
+          <img src="{{ request.user.avatar.url }}" alt="{{ request.user.username }}" class="object-cover w-full h-full">
+        </div>
+        <div
+          class="absolute -bottom-0.5 -right-0.5 size-6 rounded-full bg-black flex items-center justify-center border-2 border-white">
+          <i class="fa-solid fa-camera text-white text-xs"></i>
+        </div>
+      </a>
+      <h2 class="item-title mt-3">{{ request.user.username }}</h2>
+      <p class="item-meta mt-0.5">Tap photo to change</p>
+    </div>
+
+    <div class="space-y-0.5">
+      <a href="{% url 'edit-username' %}" class="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-neutral-50">
+        <div class="size-9 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-at text-sm text-neutral-600"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="field-label">Username</p>
+          <p class="item-title truncate">{{ request.user.username }}</p>
+        </div>
+        <i class="fa-solid fa-chevron-right text-neutral-300 text-xs"></i>
+      </a>
+
+      <div class="flex items-center gap-3 px-2 py-3 rounded-xl">
+        <div class="size-9 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-calendar-day text-sm text-neutral-600"></i>
+        </div>
+        <div class="min-w-0">
+          <p class="field-label">Joined</p>
+          <p class="item-title">{{ request.user.date_joined|date:"F Y" }}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 px-2 py-3 rounded-xl">
+        <div class="size-9 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-fire text-sm text-neutral-600"></i>
+        </div>
+        <div class="min-w-0">
+          <p class="field-label">Snap Score</p>
+          <p class="item-title">{{ request.user.id|add:1284 }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 space-y-2">
+      <a href="{% url 'home' %}"
+        class="btn btn-sm w-full rounded-full border-0 bg-black hover:bg-neutral-800 text-white font-semibold h-10">
+        Back to Chat
+      </a>
+
+      <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit"
+          class="btn btn-sm w-full rounded-full border border-neutral-200 bg-white hover:bg-neutral-50 text-red-500 font-semibold h-10">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          Log Out
+        </button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

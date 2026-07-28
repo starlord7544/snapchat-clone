@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="h-full overflow-hidden">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapchat</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.27.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.27.0/mapbox-gl.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://kit.fontawesome.com/06fd46cb4b.js" crossorigin="anonymous"></script>
+    <style type="text/tailwindcss">
+        @theme {
+            --font-sans: "Public Sans", system-ui, sans-serif;
+        }
+
+        html {
+            @apply font-sans text-sm text-black antialiased;
+        }
+
+        .page-title {
+            @apply text-base font-semibold text-black;
+        }
+
+        .item-title {
+            @apply text-sm font-semibold text-black;
+        }
+
+        .item-meta {
+            @apply text-xs text-neutral-400;
+        }
+
+        .field-label {
+            @apply text-xs font-medium text-neutral-500;
+        }
+
+        .body-text {
+            @apply text-sm text-neutral-500;
+        }
+    </style>
+</head>
+
+<body class="h-full overflow-hidden font-sans">
+    <div class="h-dvh overflow-hidden bg-white sm:bg-neutral-950 flex justify-center items-center sm:p-6">
+        <div
+            class="relative w-full h-full overflow-hidden bg-white sm:w-auto sm:h-[min(812px,calc(100dvh-3rem))] sm:aspect-[390/845] sm:border-[6px] sm:border-neutral-800 sm:rounded-[1.75rem]">
+            <div class="relative w-full h-full overflow-hidden sm:rounded-[1.35rem]">
+                {% block main %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</body>
+<script src="{% static 'index.js' %}"></script>
+
+</html>

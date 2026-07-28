@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block main %}
+<div>
+  <div id="map" style="position: absolute; top: 0; bottom: 64px; width: 100%;"></div>
+</div>
+{% include 'components/bottom-navbar.html' %}
+<script>
+  window.MAPBOX_ACCESS_TOKEN = "{{ mapbox_token|escapejs }}";
+</script>
+<script src="{% static 'map.js' %}"></script>
+{% endblock %}

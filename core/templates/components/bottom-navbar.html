@@ -1,0 +1,25 @@
+<nav class="dock absolute bg-white text-neutral-500 border-t border-neutral-100">
+  <a href="{% url 'map-view' %}"
+    class="{% if request.resolver_match.url_name == 'map-view' %}dock-active text-black{% endif %}">
+    <i class="fa-solid fa-location-dot"></i>
+    <span class="dock-label">Map</span>
+  </a>
+
+  <a href="{% url 'home' %}"
+    class="{% if request.resolver_match.url_name == 'home' %}dock-active text-black{% endif %}">
+    <i class="fa-solid fa-message"></i>
+    <span class="dock-label">Chat</span>
+  </a>
+
+  <button type="button" id="open-camera-btn">
+    <i class="fa-solid fa-camera"></i>
+    <span class="dock-label">Camera</span>
+  </button>
+
+  <button type="button">
+    <i class="fa-solid fa-user-group"></i>
+    <span class="dock-label">Stories</span>
+  </button>
+</nav>
+
+{% include 'components/camera-modal.html' %}

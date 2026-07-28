@@ -1,0 +1,229 @@
+<div id="camera-modal" class="absolute inset-0 z-50 hidden bg-black text-white">
+  <video id="camera-video" autoplay playsinline muted class="absolute inset-0 h-full w-full object-cover"></video>
+  <canvas id="camera-canvas" class="hidden"></canvas>
+  <img id="camera-preview" alt="Snap preview" class="absolute inset-0 hidden h-full w-full object-cover" />
+
+  <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/70"></div>
+
+  <div class="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-4 pt-5">
+    <button id="camera-close" type="button"
+      class="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div id="camera-status"
+      class="hidden rounded-full bg-[#FFFC00] px-4 py-2 text-xs font-semibold text-black"></div>
+    <button id="camera-retake" type="button"
+      class="hidden h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur">
+      <i class="fa-solid fa-rotate-left"></i>
+    </button>
+  </div>
+
+  <div id="camera-capture-dock" class="absolute bottom-8 left-0 right-0 z-20 flex items-center justify-center">
+    <button id="camera-capture" type="button"
+      class="flex h-20 w-20 items-center justify-center rounded-full border-[6px] border-white bg-white/30 transition active:scale-95">
+      <span class="h-14 w-14 rounded-full bg-white"></span>
+    </button>
+  </div>
+
+  {% if friend %}
+  <div id="camera-send-dock" class="absolute bottom-8 left-0 right-0 z-20 hidden px-5">
+    <button id="camera-send" type="button" data-send-url="{% url 'send-message' friend.id %}"
+      class="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#FFFC00] text-sm font-black text-black transition active:scale-[.98] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500">
+      <span id="camera-send-label">Send to {{ friend.username }}</span>
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </div>
+  {% elif friends %}
+  <div id="camera-send-panel"
+    class="absolute bottom-0 left-0 right-0 z-30 hidden max-h-[60%] rounded-t-[24px] bg-white px-4 pt-3 pb-4 text-black">
+    <div class="mx-auto mb-2 h-1.5 w-12 rounded-full bg-neutral-300"></div>
+    <p class="item-title mb-2">Send to</p>
+    <div class="max-h-52 space-y-1 overflow-y-auto">
+      {% for f in friends %}
+      <label class="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-neutral-100">
+        <input type="checkbox" class="camera-receiver" data-send-url="{% url 'send-message' f.id %}">
+        {% include 'components/avatar.html' with user=f size='sm' %}
+        <span class="item-title">{{ f.username }}</span>
+      </label>
+      {% empty %}
+      <p class="body-text">Add some friends first</p>
+      {% endfor %}
+    </div>
+    <button id="camera-send" type="button"
+      class="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#FFFC00] text-sm font-black text-black transition active:scale-[.98] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500">
+      <span id="camera-send-label">Send Snap</span>
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById("camera-modal");
+    if (!modal) return;
+
+    const openBtn = document.getElementById("open-camera-btn");
+    const video = document.getElementById("camera-video");
+    const canvas = document.getElementById("camera-canvas");
+    const preview = document.getElementById("camera-preview");
+    const closeBtn = document.getElementById("camera-close");
+    const retakeBtn = document.getElementById("camera-retake");
+    const captureBtn = document.getElementById("camera-capture");
+    const captureDock = document.getElementById("camera-capture-dock");
+    const sendDock = document.getElementById("camera-send-dock");
+    const sendPanel = document.getElementById("camera-send-panel");
+    const sendBtn = document.getElementById("camera-send");
+    const sendLabel = document.getElementById("camera-send-label");
+    const statusBox = document.getElementById("camera-status");
+    const receivers = Array.from(document.querySelectorAll(".camera-receiver"));
+    const defaultSendLabel = sendLabel ? sendLabel.textContent.trim() : "";
+
+    let stream = null;
+    let capturedBlob = null;
+
+    function getCookie(name) {
+      const match = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+      return match ? decodeURIComponent(match[2]) : "";
+    }
+
+    function showStatus(message, isError) {
+      if (!statusBox) return;
+      statusBox.textContent = message;
+      statusBox.classList.remove("hidden");
+      statusBox.classList.toggle("bg-red-500", !!isError);
+      statusBox.classList.toggle("text-white", !!isError);
+      statusBox.classList.toggle("bg-[#FFFC00]", !isError);
+      statusBox.classList.toggle("text-black", !isError);
+    }
+
+    function clearStatus() {
+      if (!statusBox) return;
+      statusBox.classList.add("hidden");
+      statusBox.textContent = "";
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+      }
+    }
+
+    function resetCapture() {
+      capturedBlob = null;
+      clearStatus();
+      preview.src = "";
+      preview.classList.add("hidden");
+      video.classList.remove("hidden");
+      captureDock.classList.remove("hidden");
+      retakeBtn.classList.add("hidden");
+      retakeBtn.classList.remove("flex");
+      if (sendDock) sendDock.classList.add("hidden");
+      if (sendPanel) sendPanel.classList.add("hidden");
+      if (sendBtn) sendBtn.disabled = false;
+      if (sendLabel) sendLabel.textContent = defaultSendLabel;
+      receivers.forEach((box) => (box.checked = false));
+    }
+
+    async function openCamera() {
+      modal.classList.remove("hidden");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showStatus("Camera is not available in this browser.", true);
+        return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
+        video.srcObject = stream;
+      } catch (error) {
+        showStatus("Allow camera permission to take a snap.", true);
+      }
+    }
+
+    function closeModal() {
+      stopCamera();
+      modal.classList.add("hidden");
+      resetCapture();
+    }
+
+    if (openBtn) openBtn.addEventListener("click", openCamera);
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (retakeBtn) retakeBtn.addEventListener("click", resetCapture);
+
+    if (captureBtn) {
+      captureBtn.addEventListener("click", () => {
+        if (!video.videoWidth || !video.videoHeight) {
+          showStatus("Camera is still loading.", true);
+          return;
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+          capturedBlob = blob;
+          preview.src = URL.createObjectURL(blob);
+          preview.classList.remove("hidden");
+          video.classList.add("hidden");
+          captureDock.classList.add("hidden");
+          retakeBtn.classList.remove("hidden");
+          retakeBtn.classList.add("flex");
+          if (sendDock) sendDock.classList.remove("hidden");
+          if (sendPanel) sendPanel.classList.remove("hidden");
+        }, "image/png");
+      });
+    }
+
+    async function sendTo(url) {
+      const formData = new FormData();
+      formData.append("image", new File([capturedBlob], "snap.png", { type: "image/png" }));
+      const response = await fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        body: formData,
+      });
+      return response.ok;
+    }
+
+    if (sendBtn) {
+      sendBtn.addEventListener("click", async () => {
+        clearStatus();
+
+        if (!capturedBlob) {
+          showStatus("Take a snap first.", true);
+          return;
+        }
+
+        const targets = receivers.length
+          ? receivers.filter((box) => box.checked).map((box) => box.dataset.sendUrl)
+          : [sendBtn.dataset.sendUrl];
+
+        if (!targets.length || !targets[0]) {
+          showStatus("Choose at least one friend.", true);
+          return;
+        }
+
+        sendBtn.disabled = true;
+        if (sendLabel) sendLabel.textContent = "Sending...";
+
+        try {
+          const results = await Promise.all(targets.map(sendTo));
+          if (!results.every(Boolean)) {
+            throw new Error("Some snaps failed to send.");
+          }
+          showStatus("Snap sent.");
+          window.setTimeout(() => window.location.reload(), 500);
+        } catch (error) {
+          showStatus(error.message, true);
+          sendBtn.disabled = false;
+          if (sendLabel) sendLabel.textContent = defaultSendLabel;
+        }
+      });
+    }
+  })();
+</script>

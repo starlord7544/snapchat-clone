@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block main %}
+{% load humanize %}
+<div class="h-full flex flex-col bg-neutral-50">
+  <div
+    class="absolute top-0 left-0 right-0 z-20 px-3 py-3 bg-white border-b border-neutral-100 flex items-center gap-2">
+    <a href="{% url 'home' %}"
+      class="size-8 flex items-center justify-center rounded-full hover:bg-neutral-100 shrink-0">
+      <i class="fa-solid fa-chevron-left text-black"></i>
+    </a>
+
+    <div class="flex items-center gap-2.5 flex-1 min-w-0">
+      {% include 'components/avatar.html' with user=friend size='sm' ring='yes' %}
+      <div class="min-w-0">
+        <p class="item-title truncate leading-tight">{{ friend.username }}</p>
+        <p class="item-meta">Friends</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1 shrink-0">
+      <button type="button" class="size-8 flex items-center justify-center rounded-full hover:bg-neutral-100">
+        <i class="fa-solid fa-phone text-neutral-500"></i>
+      </button>
+      <button type="button" class="size-8 flex items-center justify-center rounded-full hover:bg-neutral-100">
+        <i class="fa-solid fa-video text-neutral-500"></i>
+      </button>
+    </div>
+  </div>
+
+  <main class="absolute left-0 right-0 top-[64px] bottom-[76px] overflow-y-auto px-3 py-3">
+    {% if message_groups %}
+    <div class="min-h-full flex flex-col justify-end gap-3">
+      {% for group in message_groups %}
+      {% with first_msg=group.messages|first %}
+      <div class="flex flex-col max-w-[75%]">
+        {% if first_msg.sender_id == request.user.id %}
+        <p class="text-[10px] font-semibold text-red-500 mb-1">Me</p>
+        {% else %}
+        <p class="text-[10px] font-semibold text-[#00B8FF] mb-1">{{ first_msg.sender.username }}</p>
+        {% endif %}
+
+        {% for message in group.messages %}
+        {% if message.image %}
+        <div class="flex gap-1.5 items-stretch">
+          <div
+            class="w-[2px] shrink-0 {% if first_msg.sender_id == request.user.id %}bg-red-500{% else %}bg-[#00B8FF]{% endif %}">
+          </div>
+          <a href="{{ message.image.url }}" target="_blank" class="block my-1">
+            <img src="{{ message.image.url }}" alt="snap" class="max-w-[180px] max-h-[240px] rounded-lg object-cover">
+          </a>
+        </div>
+        {% endif %}
+        {% if message.text %}
+        <div class="flex gap-1.5 items-stretch">
+          <div
+            class="w-[2px] shrink-0 {% if first_msg.sender_id == request.user.id %}bg-red-500{% else %}bg-[#00B8FF]{% endif %}">
+          </div>
+          <p class="py-0.5 text-xs font-medium text-black break-all min-w-0">{{ message.text }}</p>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% with last_msg=group.messages|last %}
+        <span class="item-meta pl-2.5 mt-0.5">{{ last_msg.created_at|timesince }} ago</span>
+        {% endwith %}
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="h-full flex flex-col items-center justify-center text-center px-8">
+      <div class="mb-4">
+        {% include 'components/avatar.html' with user=friend size='xl' ring='yes' %}
+      </div>
+      <p class="item-title">Say hi to {{ friend.username }}</p>
+      <p class="item-meta mt-1">Send a chat to get started</p>
+    </div>
+    {% endif %}
+  </main>
+
+  <div class="dock absolute gap-2 px-4 justify-start bottom-0 shadow-xs dock-lg">
+    <button id="open-camera-btn" type="button" class="max-w-10 rounded-full btn btn-square text-white bg-black">
+      <i class="fa-solid fa-camera"></i>
+    </button>
+    <form action="{% url 'send-message' friend.id %}" method="post" enctype="multipart/form-data"
+      class="max-w-full flex flex-row gap-4">
+      {% csrf_token %}
+      <input name="message" type="text" class="rounded-full input input-border" placeholder="Send chat">
+      <button type="submit" class="rounded-full btn btn-square text-white bg-blue-500">
+        <i class="fa-solid fa-arrow-up"></i>
+      </button>
+    </form>
+  </div>
+
+  {% include 'components/camera-modal.html' %}
+</div>
+{% endblock %}
