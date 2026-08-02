@@ -142,6 +142,8 @@
 		const messageInput = document.getElementById("message-input")
 		const feed = document.getElementById("chat-feed")
 		const scrollContainer = document.getElementById("chat-scroll")
+    scrollContainer.scrollTop = scrollContainer.scrollHeight
+
 
 		const messageUserId = Number("{{ request.user.id }}")
 		const friendUsername = "{{ friend.username|escapejs }}"
@@ -188,27 +190,61 @@
 				groupElement.appendChild(labelElement)
 			}
 
-			const rowElement = document.createElement("div")
-			rowElement.classList.add("flex", "gap-1.5", "items-stretch")
+			if (message.image_url) {
+				const imageRow = document.createElement("div")
+				imageRow.classList.add("flex", "gap-1.5", "items-stretch")
 
-			const lineElement = document.createElement("div")
-			lineElement.classList.add("w-[2px]", "shrink-0")
-			lineElement.classList.add(isMine ? "bg-red-500" : "bg-[#00B8FF]")
+				const imageLine = document.createElement("div")
+				imageLine.classList.add("w-[2px]", "shrink-0")
+				imageLine.classList.add(isMine ? "bg-red-500" : "bg-[#00B8FF]")
 
-			const textElement = document.createElement("p")
-			textElement.classList.add(
-				"py-0.5",
-				"text-xs",
-				"font-medium",
-				"text-black",
-				"break-all",
-				"min-w-0",
-			)
-			textElement.textContent = message.text
+				const imageLink = document.createElement("a")
+				imageLink.href = message.image_url
+				imageLink.target = "_blank"
+				imageLink.classList.add("block", "my-1")
 
-			rowElement.appendChild(lineElement)
-			rowElement.appendChild(textElement)
-			groupElement.appendChild(rowElement)
+				const imageElement = document.createElement("img")
+				imageElement.src = message.image_url
+				imageElement.alt = "snap"
+				imageElement.classList.add(
+					"max-w-[180px]",
+					"max-h-[240px]",
+					"rounded-lg",
+					"object-cover",
+				)
+				imageElement.onload = () => {
+					scrollContainer.scrollTop = scrollContainer.scrollHeight
+				}
+
+				imageLink.appendChild(imageElement)
+				imageRow.appendChild(imageLine)
+				imageRow.appendChild(imageLink)
+				groupElement.appendChild(imageRow)
+			}
+
+			if (message.text) {
+				const rowElement = document.createElement("div")
+				rowElement.classList.add("flex", "gap-1.5", "items-stretch")
+
+				const lineElement = document.createElement("div")
+				lineElement.classList.add("w-[2px]", "shrink-0")
+				lineElement.classList.add(isMine ? "bg-red-500" : "bg-[#00B8FF]")
+
+				const textElement = document.createElement("p")
+				textElement.classList.add(
+					"py-0.5",
+					"text-xs",
+					"font-medium",
+					"text-black",
+					"break-all",
+					"min-w-0",
+				)
+				textElement.textContent = message.text
+
+				rowElement.appendChild(lineElement)
+				rowElement.appendChild(textElement)
+				groupElement.appendChild(rowElement)
+			}
 
 			const timeElement = document.createElement("span")
 			timeElement.classList.add("item-meta", "pl-2.5", "mt-0.5")
@@ -228,6 +264,7 @@
 			chatSocket = new WebSocket(
 				wsScheme + window.location.host + "/ws/chat/" + chatID + "/",
 			)
+			window.chatSocket = chatSocket
 
 			chatSocket.onmessage = (event) => {
 				const data = JSON.parse(event.data)

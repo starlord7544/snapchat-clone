@@ -1,11 +1,23 @@
+import base64
 import json
+import uuid
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import Chat, Message
 from django.db.models import Q
 from channels.db import database_sync_to_async
 from django.shortcuts import get_object_or_404
+
+
+def _decode_base64_image(data_url):
+	header, _, encoded = data_url.partition(",")
+	ext = "png"
+	if "image/" in header:
+		ext = header.split("image/")[1].split(";")[0] or "png"
+	return ContentFile(base64.b64decode(encoded), name=f"{uuid.uuid4().hex}.{ext}")
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
 	async def connect(self):
@@ -33,16 +45,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 	async def receive(self, text_data = None):
 		user = self.scope["user"]
-		payload = json.loads(text_data) 
+		payload = json.loads(text_data)
 		text = payload.get("message", "")
+		image = payload.get("image")
 
-		if not text:
+		if not text and not image:
 			return
-  
-		saved = await self._save_message(self.chat_id, user.id, text)
+
+		saved = await self._save_message(self.chat_id, user.id, text, image)
 		await self.channel_layer.group_send(self.group_name, {
 			"type": "chat_message",
 			"text": saved["text"],
+			"image_url": saved["image_url"],
 			"sender_id": saved["sender_id"],
 			"sender_username": saved["sender_username"],
 			"created_at": saved["created_at"]
@@ -53,6 +67,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 		await self.send(
       		text_data=json.dumps({
 				"text": event["text"],
+				"image_url": event.get("image_url"),
 				"sender_id": event["sender_id"],
 				"sender_username": event["sender_username"],
 				"created_at": event["created_at"]
@@ -70,19 +85,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
 	
  
 	@database_sync_to_async
-	def _save_message(self, chat_id, sender_id, text_message):
+	def _save_message(self, chat_id, sender_id, text_message, image_data=None):
 		sender = get_object_or_404(get_user_model(), pk=sender_id)
 		chat = Chat.objects.get(pk=chat_id)
-  
+
 		receiver = chat.user1 if sender.id == chat.user1.id else chat.user2
-  
-		message = Message.objects.create(chat_id=chat_id, sender=sender, reciever=receiver, text=text_message)
+
+		image_file = _decode_base64_image(image_data) if image_data else None
+		message = Message.objects.create(
+			chat_id=chat_id, sender=sender, reciever=receiver, text=text_message, image=image_file
+		)
 		now = timezone.now()
 		chat.last_message = now
 		chat.save()
-  
+
 		return {
 			"text": message.text,
+			"image_url": message.image.url if message.image else None,
 			"sender_id": sender_id,
 			"sender_username": sender.get_username(),
 			"created_at": now.isoformat(),

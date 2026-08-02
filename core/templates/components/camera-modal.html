@@ -178,6 +178,29 @@
       });
     }
 
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function canSendViaSocket() {
+      return !!(
+        sendDock &&
+        window.chatSocket &&
+        window.chatSocket.readyState === WebSocket.OPEN
+      );
+    }
+
+    async function sendViaSocket() {
+      const base64 = await blobToBase64(capturedBlob);
+      window.chatSocket.send(JSON.stringify({ image: base64 }));
+      return true;
+    }
+
     async function sendTo(url) {
       const formData = new FormData();
       formData.append("image", new File([capturedBlob], "snap.png", { type: "image/png" }));
@@ -199,11 +222,12 @@
           return;
         }
 
+        const viaSocket = canSendViaSocket();
         const targets = receivers.length
           ? receivers.filter((box) => box.checked).map((box) => box.dataset.sendUrl)
           : [sendBtn.dataset.sendUrl];
 
-        if (!targets.length || !targets[0]) {
+        if (!viaSocket && (!targets.length || !targets[0])) {
           showStatus("Choose at least one friend.", true);
           return;
         }
@@ -212,12 +236,18 @@
         if (sendLabel) sendLabel.textContent = "Sending...";
 
         try {
-          const results = await Promise.all(targets.map(sendTo));
+          const results = viaSocket
+            ? [await sendViaSocket()]
+            : await Promise.all(targets.map(sendTo));
           if (!results.every(Boolean)) {
             throw new Error("Some snaps failed to send.");
           }
           showStatus("Snap sent.");
-          window.setTimeout(() => window.location.reload(), 500);
+          if (viaSocket) {
+            window.setTimeout(closeModal, 400);
+          } else {
+            window.setTimeout(() => window.location.reload(), 500);
+          }
         } catch (error) {
           showStatus(error.message, true);
           sendBtn.disabled = false;
