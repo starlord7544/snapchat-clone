@@ -131,7 +131,7 @@ def chat_details_view(request, id):
     return render(
         request,
         "pages/chat-details.html",
-        {"friend": friend, "message_groups": message_groups},
+        {"friend": friend, "message_groups": message_groups, "chat_id": id},
     )
 
 
